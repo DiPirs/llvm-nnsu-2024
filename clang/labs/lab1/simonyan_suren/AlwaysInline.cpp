@@ -10,8 +10,6 @@
 #include "llvm/ADT/StringRef.h"
 #include <queue>
 
-namespace {
-
 class AlwaysInlineConsumer : public clang::ASTConsumer {
 public:
   bool HandleTopLevelDecl(clang::DeclGroupRef DeclGroup) override {
@@ -28,20 +26,19 @@ public:
           while (!StQueue.empty() && !CondFound) {
             clang::Stmt *St = StQueue.front();
             StQueue.pop();
+            if (clang::isa<clang::IfStmt>(St) ||
+                clang::isa<clang::WhileStmt>(St) ||
+                clang::isa<clang::ForStmt>(St) ||
+                clang::isa<clang::DoStmt>(St) ||
+                clang::isa<clang::SwitchStmt>(St)) {
+              CondFound = true;
+              break;
+            }
             for (clang::Stmt *StCh : St->children()) {
-              if (clang::isa<clang::IfStmt>(St) ||
-                  clang::isa<clang::WhileStmt>(St) ||
-                  clang::isa<clang::ForStmt>(St) ||
-                  clang::isa<clang::DoStmt>(St) ||
-                  clang::isa<clang::SwitchStmt>(St)) {
-                CondFound = true;
-                break;
-              }
               StQueue.push(StCh);
             }
           }
           if (!CondFound) {
-            // TODO: how to put correct location??
             clang::SourceLocation Location(Decl->getSourceRange().getBegin());
             clang::SourceRange Range(Location);
             Decl->addAttr(
@@ -63,17 +60,10 @@ protected:
   }
   bool ParseArgs(const clang::CompilerInstance &Compiler,
                  const std::vector<std::string> &Args) override {
-    for (const std::string &Arg : Args) {
-      if (Arg == "--help") {
-        llvm::outs() << "adds always_inline if no conditions inside body\n";
-        return false;
-      }
-    }
     return true;
   }
 };
 
-} // namespace
-
 static clang::FrontendPluginRegistry::Add<AlwaysInlinePlugin>
-    X("always-inline", "adds always_inline if no conditions inside body");
+    X("always-inlines-plugin",
+      "Print a function without conditions with an attribute");
