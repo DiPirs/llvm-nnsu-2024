@@ -12,7 +12,7 @@
 using namespace llvm;
 
 namespace {
-class BalyasovMulPassPass : public MachineFunctionPass {
+class BalyasovMulPass : public MachineFunctionPass {
 public:
   static char ID;
   BalyasovMulPass() : MachineFunctionPass(ID) {}
